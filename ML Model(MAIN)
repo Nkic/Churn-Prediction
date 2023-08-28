@@ -1,0 +1,60 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix
+
+df = pd.read_csv("customer_churn.csv")
+
+df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
+
+df.dropna(inplace=True)
+
+df = df.drop(["customerID"], axis=1) #consider what's really necessary 
+
+obj_cols = []
+
+for i in df.columns:
+    if df[i].dtypes == 'object':
+        obj_cols.append(i)
+        
+le = LabelEncoder()
+
+for i in obj_cols:
+    df[i] = le.fit_transform(df[i])
+
+'''
+fig = plt.figure(figsize=(20, 10))
+print(sns.heatmap(df.corr(), annot=True, cmap="rainbow"))
+
+ONLY FOR CHECKING CORRELATION USING HEATMAP
+'''
+
+x = df.loc[:,:"TotalCharges"]
+y = df['Churn']
+
+#MODEL TRAIN
+x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.7, random_state=99)
+rf_model = RandomForestClassifier()
+rf_model.fit(x_train, y_train)
+rf_pred = rf_model.predict(x_test)
+print(accuracy_score(y_test, rf_pred))
+
+#LOOKING FOR BETTER ACCURACY USING n_estimators(looping)
+estimator_values = [100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 660, 700, 750, 800, 850]
+df1 = pd.DataFrame(columns=['n_estimators', 'accuracy'])
+
+for X in estimator_values:
+    model = RandomForestClassifier(n_estimators=X)
+    model.fit(x_train, y_train)
+    y_pred = model.predict(x_test)
+    acc_score = accuracy_score(y_test, y_pred)*100
+    df1 = df1.append({'n_estimators': X, 'accuracy': acc_score}, ignore_index=True)
+
+model = RandomForestClassifier(n_estimators=550)
+model.fit(x_train, y_train)
+y_pred = model.predict(x_test)
+print(accuracy_score(y_pred, y_test))
